@@ -131,6 +131,16 @@ ISR (ADC_vect)
 {
 	num	= ADCH;
 	ADCSRA	|= (1<<ADSC);
+	
+	// Comparar voltaje (num) con contador (counterLED)
+	if (num == counterLED)
+	{
+		PORTD	|= (1<<PD0);
+	} 
+	else
+	{
+		PORTD	&= ~(1<<PD0);
+	}
 }
 
 ISR(TIMER0_OVF_vect)
@@ -151,11 +161,11 @@ ISR(TIMER0_OVF_vect)
 		
 		// Variar displays
 		if (displayFlag == 0) {
-			PORTD	= tabla7Seg[bajo];	// Enviar patrón al puerto
+			PORTD	= (tabla7Seg[bajo] & 0xFE) | (PORTD & 0x01);	// Enviar patrón al puerto conservando alarma
 			PORTB	|= (1<<PORTB4);
 			displayFlag = 1;
 			} else {
-			PORTD	= tabla7Seg[alto];
+			PORTD	= (tabla7Seg[alto] & 0xFE) | (PORTD & 0x01);
 			PORTB	|= (1<<PORTB5);
 			displayFlag = 0;
 			}	
