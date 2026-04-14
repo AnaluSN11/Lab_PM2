@@ -16,7 +16,6 @@ volatile uint8_t counter		= 0;
 volatile uint8_t counterLED		= 0;
 volatile uint8_t estado_btn0	= 1;	// Estado anterior PC4
 volatile uint8_t estado_btn1	= 1;	// Estado anterior PC5
-// Variables globales
 volatile uint8_t num	= 0;
 volatile uint8_t alto	= 0;
 volatile uint8_t bajo	= 0;
