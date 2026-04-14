@@ -3,7 +3,7 @@
  *
  * Created: 12/04/2026 16:49:45 
  * Author : AnaLucia 
- * Description: Control de servomotor con potenciómetro
+ * Description: Control de servomotor, con PWM del timer 1, con potenciómetro (lectura ADC)
  */
 /****************************************/
 // Encabezado (Libraries)
@@ -60,7 +60,7 @@ void initADC(void)
 ISR(ADC_vect)
 {
 	uint16_t lectura = ADC; // Leer resultado (0-1023)
-	uint16_t ciclo = 125 + ((uint32_t)lectura * 125) / 1023; // Mapear a rango servo
+	uint16_t ciclo = 125 + ((uint32_t)lectura * 200) / 1023; // Mapear a rango servo
 	
 	updateDutyCycle1(ciclo);
 	ADCSRA	|= (1<<ADSC); // Iniciar siguiente conversión
