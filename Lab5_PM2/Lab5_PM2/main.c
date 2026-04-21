@@ -62,17 +62,22 @@ void initADC(void)
 
 /****************************************/
 // Interrupt routines
-ISR(TIMER0_OVF_vect)
+ISR(TIMER0_COMPA_vect)
 {
-	if (pwm_counter >= pwm_duty)
+	pwm_counter++;
+
+	if (pwm_counter >= 255)
 	{
-		// Findel pulso o duty=0: salida en BAJO
-		PWM_manual_PORT	&= ~(1<<PWM_manual_PIN);
-		pwm_counter = 0; // Reiniciar contador
-	}  else {
-		// Durante elpuslo: salida en ALTO
-		PWM_manual_PORT	|= (1<<PWM_manual_PIN);
-		pwm_counter++;
+		pwm_counter = 0;
+	}
+
+	if (pwm_counter < pwm_duty)
+	{
+		PWM_manual_PORT |= (1 << PWM_manual_PIN);
+	}
+	else
+	{
+		PWM_manual_PORT &= ~(1 << PWM_manual_PIN);
 	}
 }
 
@@ -124,6 +129,3 @@ ISR(ADC_vect)
 	}
 	ADCSRA	|= (1<<ADSC);
 }
-
-
-

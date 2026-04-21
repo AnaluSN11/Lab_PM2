@@ -138,15 +138,15 @@ void initPWM_Manual(void)
 	PWM_manual_DDR	|= (1<<PWM_manual_PIN);
 	// LED apagado inicialmente
 	PWM_manual_PORT	&= ~(1<<PWM_manual_PIN);
-	// Limpiar registros Timer0
-	TCCR0A	= 0;
+	// Timer0 en modo CTC
+	TCCR0A	= (1<<WGM01);
 	TCCR0B	= 0;
-	TCNT0	= 0;
-	// Configurar timer en modo normal, prescaler 64 -> overflow cada ~1ms
-	// f_PWM = 16MHz/(64*256) = 976MHz
+	// Valor de comparación 
+	OCR0A	= 15; // Aprx. 1kHz base
+	// Prescaler 64
 	TCCR0B	|= (1<<CS01) | (1<<CS00);
-	// Habilitar interrupciones para overflow
-	TIMSK0	|= (1<<TOIE0);
+	// Habilitar interrupciones para comparación
+	TIMSK0	|= (1<<OCIE0A);
 }
 
 void updateDutyCycleManual(uint8_t duty)
