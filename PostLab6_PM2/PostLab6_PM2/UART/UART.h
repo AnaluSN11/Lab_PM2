@@ -1,7 +1,7 @@
 /*
  * UART.h
  *
- * Created: 20/04/2026 20:38:27
+ * Created: 26/04/2026 22:28:26
  *  Author: AnaLucia
  */ 
 
@@ -16,7 +16,7 @@
 #define sync			1
 #define async			0
 // Paridad
-#define disabled_parity 0
+#define disabled_parity 1
 #define even_parity		2
 #define odd_parity		3
 // Stop bits
@@ -29,5 +29,8 @@
 
 void initUART(uint8_t sync_mode, uint8_t parity, uint8_t stop_bits, uint8_t char_size);
 void writeChar(char data);
+char readChar(void);
+
+
 
 #endif /* UART_H_ */

@@ -1,7 +1,7 @@
 /*
  * UART.c
  *
- * Created: 20/04/2026 20:38:15
+ * Created: 21/04/2026 11:56:57
  *  Author: AnaLucia
  */ 
 
@@ -19,7 +19,7 @@ void initUART(uint8_t sync_mode, uint8_t parity, uint8_t stop_bits, uint8_t char
 	if (sync_mode == async) {
 		UCSR0C	&= ~(1<<UMSEL01);
 		UCSR0C	&= ~(1<<UMSEL00);
-	} else {
+		} else {
 		UCSR0C	|= (1<<UMSEL00);
 		UCSR0C	&= ~(1<<UMSEL01);
 	}
@@ -48,14 +48,13 @@ void initUART(uint8_t sync_mode, uint8_t parity, uint8_t stop_bits, uint8_t char
 	// Seleccionar cantidad de Stop Bits
 	if (stop_bits == one_stop_bit) {
 		UCSR0C	&= ~(1<<USBS0);
-	} else {
+		} else {
 		UCSR0C	|= (1<<USBS0);
 	}
 	
 	// Seleccionar cantidad de bits
 	UCSR0B &= ~(1<<UCSZ02);  // Limpiar primero
-	UCSR0C	&= ~((1<<UCSZ01) | (1<<UCSZ00));
-    switch(char_size)
+	switch(char_size)
 	{
 		case 5:
 		UCSR0C	&= ~(1<<UCSZ01);
@@ -84,12 +83,19 @@ void initUART(uint8_t sync_mode, uint8_t parity, uint8_t stop_bits, uint8_t char
 	UCSR0B	|= (1<<RXCIE0) | (1<<RXEN0) | (1<<TXEN0);
 	
 	// Cargar UBRR0 (valor obtenido con los cálculos)
-	UBRR0 = UBRR_VALUE;
+	UBRR0 = BAUD_RATE;
 }
 
 // Enviar un carácter por TX
 void writeChar(char data)
 {
-	while (!(UCSR0A & (1<<UDRE0))); // Esperar que el buffer esté listo 
+	while (!(UCSR0A & (1<<UDRE0))); // Esperar que el buffer esté listo
 	UDR0 = data;
+}
+
+// Recibir un carácter por RX
+char readChar(void)
+{
+	while (!(UCSR0A & (1<<RXC0))); // Esperar dato recibido
+	return UDR0;
 }
