@@ -13,6 +13,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <stdlib.h>
 #include "ADC/ADC.h"
 #include "UART/UART.h"
 
@@ -21,7 +22,6 @@ volatile uint8_t receivedChar	= 0; // Carácter recibido por UART
 volatile uint8_t dataReady		= 0; // Bandera, hay dato nuevo recibido
 /****************************************/
 // Function prototypes
-char mapADCtoChar(uint16_t adcValue);
 void writeString(const char* str);
 
 /****************************************/
@@ -67,8 +67,9 @@ int main(void)
 			// Leer potenciómetro
 			uint16_t adcVal = readADC(0); // Leer canal ADC0 (PC0)
 			writeString("Potenciómetro: ");		// Enviar por UART a hiperterminal
-			char toSend = mapADCtoChar(adcVal); // Convertir a carácter ASCII
-			writeChar(toSend);
+			char buffer[6]; 
+			itoa(adcVal, buffer, 10);			// Función para convertir a texto
+			writeString(buffer);
 			writeString("\r\n");
 		} 
 		else if (option == '2')
@@ -98,12 +99,6 @@ int main(void)
 
 /****************************************/
 // NON-Interrupt subroutines
-char mapADCtoChar(uint16_t adcValue)
-{
-	uint8_t index = (uint8_t)((adcValue * 94UL) / 1023); // Conversión a ASCII
-	return (char)(32 + index);
-}
-
 void writeString(const char* str)
 {
 	while (*str)
