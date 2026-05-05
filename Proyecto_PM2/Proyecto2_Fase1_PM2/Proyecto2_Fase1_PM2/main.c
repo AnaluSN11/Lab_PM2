@@ -21,6 +21,7 @@
 /****************************************/
 #define MODO_MANUAL     0
 #define MODO_ADAFRUIT   1
+#define MODO_EEPROM		2
 
 // LED de modo: PB0
 #define LED_MODO_DDR    DDRB
@@ -32,8 +33,8 @@
 #define SERVO_MAX_T1    700
 
 // Mapeo OCR2 (Timer2, valores verificados en hardware)
-#define SERVO_MIN_T2    12
-#define SERVO_MAX_T2    37
+#define SERVO_MIN_T2    8
+#define SERVO_MAX_T2    16
 
 /****************************************/
 /* Variables globales                   */
@@ -64,7 +65,7 @@ int main(void)
     initPWM1B(no_invertir);   // PB2 -> Servo 2
 
     // Timer2: Servo 3 y 4
-    initTimer2(fastPWM, 1024);
+    initTimer2(phasePWM, 1024);
     initPWM2A(no_invertir);   // PB3 -> Servo 3
     initPWM2B(no_invertir);   // PD3 -> Servo 4
 
@@ -97,9 +98,9 @@ void setup(void)
 {
     CLKPR = (1 << CLKPCE);
     CLKPR = 0;
-
+	// De A0-A3 son entradas -> potenciómetros
     DDRC &= ~((1 << DDC0) | (1 << DDC1) | (1 << DDC2) | (1 << DDC3));
-
+	// Declaramos como salida las LEDs, he inicialmente prendida la LED1 para modo manual 
     LED_MODO_DDR  |=  (1 << LED_MODO_PIN);
     LED_MODO_PORT &= ~(1 << LED_MODO_PIN);
 }
