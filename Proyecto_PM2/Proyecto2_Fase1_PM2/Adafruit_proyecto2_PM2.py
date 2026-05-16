@@ -2,8 +2,8 @@ from Adafruit_IO import MQTTClient
 import serial
 import time
 
-ADAFRUIT_IO_USERNAME = "AnaLu_11"
-ADAFRUIT_IO_KEY = "aio_HJZB83hYrtYfQpjfnup69jvab2Xr" # No es la contraseña del perfil xd, me confundí con eso
+ADAFRUIT_IO_USERNAME = 
+ADAFRUIT_IO_KEY =  # No es la contraseña del perfil xd, me confundí con eso
 
 FEEDS = ["feed1", "feed2", "feed3", "feed4"]  # Solo feeds para leer datos (Tx del Adafruit según lo hizo Pedro)
 
