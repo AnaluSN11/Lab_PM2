@@ -9,10 +9,13 @@
 /* Encabezado                           */
 /****************************************/
 #define F_CPU 16000000UL
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/eeprom.h>
+#include <stdlib.h>
+
 #include "PWM/PWM.h"
 #include "UART/UART.h"
 #include "ADC/ADC.h"
@@ -20,8 +23,8 @@
 /****************************************/
 /* Definiciones                         */
 /****************************************/
-#define MANUAL     0
-#define ADAFRUIT   1
+#define MANUAL		0
+#define ADAFRUIT	1
 #define EEPROM		2
 
 // Mapeo OCR1 
@@ -32,10 +35,11 @@
 #define SERVO_MAX_T2    16
 
 // UART
-#define UART_BUF_SIZE	8 // S1:090\n + 1 seguro
+#define UART_BUF_SIZE	32 
+
 // EEPROM
 #define NUM_POSICIONES	4
-#define EEPROM_BASE 0x00
+#define EEPROM_BASE		0x00
 
 // LEDs
 #define LED1_ON   PORTB |=  (1 << PB0)
@@ -46,8 +50,9 @@
 /****************************************/
 /* Variables globales                   */
 /****************************************/
-volatile uint8_t modo		= MANUAL;
+volatile uint8_t modo = MANUAL;
 volatile uint8_t cambioModo = 0;
+
 // Variables para los servos
 volatile uint8_t servo1 = 90;
 volatile uint8_t servo2 = 90;
@@ -59,7 +64,7 @@ volatile char uartBuf[UART_BUF_SIZE];
 volatile uint8_t uartIdx = 0;
 volatile uint8_t uartListo = 0;
 
-// Variables para EEPROM
+// EEPROM
 volatile uint8_t poseActual		= 0; //0-3
 volatile uint8_t grabarPose		= 0; // bandera PD4
 volatile uint8_t navegarPose	= 0; // 0=nada, 1=siguiente, 2=anterior
@@ -68,11 +73,16 @@ volatile uint8_t navegarPose	= 0; // 0=nada, 1=siguiente, 2=anterior
 /* Prototipos                           */
 /****************************************/
 void setup(void);
+
 void modoManual(void);
 void modoAdafruit(void);
 void modoEEPROM(void);
+
 uint16_t mapeoT1(uint8_t angulo);
 uint8_t mapeoT2(uint8_t angulo);
+
+void moverServo(uint8_t servo, uint8_t angulo);
+
 void guardarPose(uint8_t pose, uint8_t s1, uint8_t s2, uint8_t s3, uint8_t s4);
 void cargarPose(uint8_t pose);
 void enviarPosicion(uint8_t servo, uint8_t angulo);
@@ -95,11 +105,12 @@ int main(void)
     initPWM2A(no_invertir);   // PB3 -> Servo 3
     initPWM2B(no_invertir);   // PD3 -> Servo 4
 	
-	updateDutyCycle1A(mapeoT1(90));
-	updateDutyCycle1B(mapeoT1(90));
-	updateDutyCycle2A(mapeoT2(90));
-	updateDutyCycle2B(mapeoT2(90));
-
+	// Posición inicial
+	moverServo(1, 90);
+	moverServo(2, 90);
+	moverServo(3, 90);
+	moverServo(4, 90);
+	
     // ADC 
     initADC();
     ADCSRA |= (1 << ADSC);
@@ -111,6 +122,7 @@ int main(void)
     _delay_ms(100);
     while (1)
     {
+		// Cambio de modo
 		if (cambioModo)
 		{
 			cambioModo = 0;
@@ -126,11 +138,18 @@ int main(void)
 			}
 		}
 		
-		switch(modo)
+		// Modos
+		if (modo == MANUAL)
 		{
-			case MANUAL: modoManual(); break;
-			case ADAFRUIT: modoAdafruit(); break;
-			case EEPROM: modoEEPROM(); break;
+			modoManual();
+		}
+		else if (modo == ADAFRUIT)
+		{
+			modoAdafruit();
+		}
+		else
+		{
+			modoEEPROM();
 		}
 	}
 }
@@ -183,42 +202,86 @@ void modoManual(void)
 
 void modoAdafruit(void)
 {
-	if (uartListo)
+	if (!uartListo)
+	return;
+
+	uartListo = 0;
+
+	char buf[UART_BUF_SIZE];
+	for (uint8_t k = 0; k < UART_BUF_SIZE; k++)
+	buf[k] = uartBuf[k];
+
+	// DEBUG: imprime lo que hay en el buffer
+	writeChar('[');
+	for (uint8_t k = 0; buf[k] != '\0' && k < UART_BUF_SIZE; k++)
+	writeChar(buf[k]);
+	writeChar(']');
+	writeChar('\n');
+
+	uint8_t i = 0;
+	while (buf[i] != ':' && buf[i] != '\0' && i < UART_BUF_SIZE)
+	i++;
+
+	if (buf[i] != ':' || i == 0)
+	return;
+
+	uint8_t servo  = buf[i - 1] - '0';
+	uint8_t angulo = (uint8_t)atoi(&buf[i + 1]);
+
+	if (servo >= 1 && servo <= 4 && angulo <= 180)
 	{
-		uartListo = 0;
-		if (uartBuf[0] == 'S' && uartBuf[2] == ':')
-		{
-			uint8_t servo	= uartBuf[1] - '0';
-			uint8_t angulo	= (uartBuf[3] - '0') * 100
-							+ (uartBuf[4] - '0') * 10
-							+ (uartBuf[5] - '0');
-			if (servo >= 1 && servo <= 4 && angulo <= 180)
-			{
-				switch (servo)
-				{
-					case 1: servo1 = angulo; updateDutyCycle1A(mapeoT1(angulo)); enviarPosicion(1, angulo); break;
-					case 2: servo2 = angulo; updateDutyCycle1B(mapeoT1(angulo)); enviarPosicion(2, angulo); break;
-					case 3: servo3 = angulo; updateDutyCycle2A(mapeoT2(angulo)); enviarPosicion(3, angulo); break;
-					case 4: servo4 = angulo; updateDutyCycle2B(mapeoT2(angulo)); enviarPosicion(4, angulo); break;
-				}
-			}
-		}
+		moverServo(servo, angulo);
+		enviarPosicion(servo, angulo);
 	}
 }
 
 void modoEEPROM(void)
 {
-    if (navegarPose)
-    {
-	    if (navegarPose == 1)       // siguiente
-	    poseActual = (poseActual + 1) % NUM_POSICIONES;
-	    else if (navegarPose == 2)  // anterior
-	    poseActual = (poseActual + NUM_POSICIONES - 1) % NUM_POSICIONES;
-
-	    navegarPose = 0;
-	    cargarPose(poseActual);
-    }
+	if (navegarPose)
+	{
+		if (navegarPose == 1)
+		{
+			poseActual = (poseActual + 1) % NUM_POSICIONES;
+		}
+		else if (navegarPose == 2)
+		{
+			poseActual = (poseActual + NUM_POSICIONES - 1) % NUM_POSICIONES;
+		}
+		
+		navegarPose = 0;
+		cargarPose(poseActual);
+	}
 }
+
+/****************************************/
+/* Función mover servo                  */
+/****************************************/
+void moverServo(uint8_t servo, uint8_t angulo)
+{
+	if (angulo > 180)
+		return;
+	
+	switch (servo)
+	{
+		case 1:
+			servo1 = angulo;
+			updateDutyCycle1A(mapeoT1(angulo));
+			break;
+		case 2:
+			servo2 = angulo;
+			updateDutyCycle1B(mapeoT1(angulo));
+			break;
+		case 3:
+			servo3 = angulo;
+			updateDutyCycle2A(mapeoT2(angulo));
+			break;
+		case 4: 
+			servo4 = angulo;
+			updateDutyCycle2B(mapeoT2(angulo));
+			break;
+	}
+}
+
 
 /****************************************/
 /* Función auxiliar: mapear ángulo      */
@@ -263,10 +326,10 @@ void cargarPose(uint8_t pose)
 	if (servo3 > 180) servo3 = 90;
 	if (servo4 > 180) servo4 = 90;
 
-    updateDutyCycle1A(mapeoT1(servo1));
-    updateDutyCycle1B(mapeoT1(servo2));
-    updateDutyCycle2A(mapeoT2(servo3));
-    updateDutyCycle2B(mapeoT2(servo4));
+    moverServo (1, servo1);
+    moverServo (2, servo2);
+    moverServo (3, servo3);
+    moverServo (4, servo4);
 	
     // Informar posiciones actuales
     enviarPosicion(1, servo1);
@@ -280,11 +343,22 @@ void cargarPose(uint8_t pose)
 /****************************************/
 void enviarPosicion(uint8_t servo, uint8_t angulo)
 {
-	writeChar('R');
 	writeChar('0' + servo);
 	writeChar(':');
-	writeChar('0' + (angulo / 100));
-	writeChar('0' + (angulo % 100) / 10);
+	
+	if (angulo >= 100)
+	{
+		writeChar('0' + (angulo / 100));
+	}
+	if (angulo >= 10)
+	{
+		writeChar('0' + (angulo / 10) % 10);
+	}
+	else
+	{
+		writeChar('0');
+	}
+	
 	writeChar('0' + (angulo % 10));
 	writeChar('\n');
 }
@@ -306,7 +380,7 @@ ISR(ADC_vect)
 		ADCSRA	|= (1<<ADSC); // Mantener corriendo
 		return;
 	}
-
+	// Descartar primera lectura
     if (estabilizando)
     {
         estabilizando = 0;          // Descartar esta lectura, la siguiente es válida
@@ -318,9 +392,8 @@ ISR(ADC_vect)
     {
         case 0: // A0 -> Servo 1 (OC1A, Timer1)
         {
-            uint16_t ocr = SERVO_MIN_T1 + ((uint32_t)lectura * (SERVO_MAX_T1 - SERVO_MIN_T1)) / 1023;
-            updateDutyCycle1A(ocr);
 			servo1 = ((uint32_t)lectura * 180) / 1023;
+			moverServo(1, servo1);
             ADMUX = (1 << REFS0) | (1 << MUX0); // Siguiente: ADC1
             canal = 1;
             estabilizando = 1;
@@ -329,9 +402,8 @@ ISR(ADC_vect)
 
         case 1: // A1 -> Servo 2 (OC1B, Timer1)
         {
-            uint16_t ocr = SERVO_MIN_T1 + ((uint32_t)lectura * (SERVO_MAX_T1 - SERVO_MIN_T1)) / 1023;
-            updateDutyCycle1B(ocr);
 			servo2 = ((uint32_t)lectura * 180) / 1023;
+			moverServo(2, servo2);
             ADMUX = (1 << REFS0) | (1 << MUX1); // Siguiente: ADC2
             canal = 2;
             estabilizando = 1;
@@ -340,9 +412,8 @@ ISR(ADC_vect)
 
         case 2: // A2 -> Servo 3 (OC2A, Timer2)
         {
-            uint8_t ocr = SERVO_MIN_T2 + ((uint32_t)lectura * (SERVO_MAX_T2 - SERVO_MIN_T2)) / 1023;
-            updateDutyCycle2A(ocr);
 			servo3 = ((uint32_t)lectura * 180) / 1023;
+			moverServo(3, servo3);
             ADMUX = (1 << REFS0) | (1 << MUX1) | (1 << MUX0); // Siguiente: ADC3
             canal = 3;
             estabilizando = 1;
@@ -351,9 +422,8 @@ ISR(ADC_vect)
 
         case 3: // A3 -> Servo 4 (OC2B, Timer2)
         {
-            uint8_t ocr = SERVO_MIN_T2 + ((uint32_t)lectura * (SERVO_MAX_T2 - SERVO_MIN_T2)) / 1023;
-            updateDutyCycle2B(ocr);
 			servo4 = ((uint32_t)lectura * 180) / 1023;
+			moverServo(4, servo4);
             ADMUX = (1 << REFS0); // Siguiente: ADC0
             canal = 0;
             estabilizando = 1;
@@ -407,16 +477,20 @@ ISR(INT0_vect)
 ISR(USART_RX_vect)
 {
 	char c = UDR0;
+
+	if (c == '\n' || c == '\r')
+	{
+		if (uartIdx > 0)  // Solo procesa si hay algo en el buffer
+		{
+			uartBuf[uartIdx] = '\0';
+			uartListo = 1;
+			uartIdx = 0;
+		}
+		return;
+	}
 	
-    if (c == '\n' || c == '\r')
-    {
-	    uartBuf[uartIdx] = '\0';   // cerrar string
-	    uartListo = 1;             // avisar al while
-	    uartIdx   = 0;             // resetear índice
-    }
-    else if (uartIdx < UART_BUF_SIZE - 1)
-    {
-	    uartBuf[uartIdx++] = c;
-    }
-    // si desborda simplemente ignoramos
-} 
+	if (uartIdx < UART_BUF_SIZE - 1)
+	{
+		uartBuf[uartIdx++] = c;
+	}
+}
