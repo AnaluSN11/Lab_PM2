@@ -43,7 +43,7 @@
 
 // Número de poses almacenables en EEPROM
 #define NUM_POSICIONES	4
-// Dirección base en EEPROM (donde inicial el bloque de poses)
+// Dirección base en EEPROM (donde inicia el bloque de poses)
 #define EEPROM_BASE		0x00
 
 // Control de LEDs para estados
@@ -127,7 +127,7 @@ int main(void)
     _delay_ms(100); // Espera breve para estabilizar periféricos
     while (1)
     {
-		/*???????? Procesar cambio de modo ????????*/
+		/*----- Procesar cambio de modo -----*/
 		// La ISR de INT0 (para botones) activa cambioModo, aquí se aplica el efecto
 		if (cambioModo)
 		{
@@ -144,7 +144,7 @@ int main(void)
 			}
 		}
 		
-		/*???????? Ejecutar lógica del modo activo ????????*/
+		/*----- Ejecutar lógica del modo activo -----*/
 		if (modo == MANUAL)
 		{
 			modoManual();
