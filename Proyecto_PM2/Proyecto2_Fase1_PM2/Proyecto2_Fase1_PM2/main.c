@@ -3,7 +3,7 @@
  *
  * Created: 28/04/2026 10:23:32
  * Author: AnaLucia
- * Description: Control de 4 servomotores. 
+ * Description: Control de 4 servomotores - Animatrónico
  * Modos de funcionamiento:
  * 1. Control manueal mediante potenciómetros (ADC)
  * 2. Control remoto mediante Adafruit IO usando UART
