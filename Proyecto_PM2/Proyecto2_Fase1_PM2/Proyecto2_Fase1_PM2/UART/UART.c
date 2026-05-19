@@ -93,9 +93,3 @@ void writeChar(char data)
 	UDR0 = data;
 }
 
-// Recibir un carácter por RX
-char readChar(void)
-{
-	while (!(UCSR0A & (1<<RXC0))); // Esperar dato recibido
-	return UDR0;
-}

@@ -7,9 +7,6 @@
 
 #include "PWM.h"
 
-volatile uint8_t pwm_duty = 0;
-volatile uint8_t pwm_counter = 0;
-
 void initTimer1(uint8_t modo, uint16_t prescaler)
 {
 	// Borrar registros para limpiar

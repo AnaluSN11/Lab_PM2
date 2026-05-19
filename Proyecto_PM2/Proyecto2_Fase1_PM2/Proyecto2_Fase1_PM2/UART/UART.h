@@ -27,7 +27,6 @@
 
 void initUART(uint8_t sync_mode, uint8_t parity, uint8_t stop_bits, uint8_t char_size);
 void writeChar(char data);
-char readChar(void);
 
 
 
